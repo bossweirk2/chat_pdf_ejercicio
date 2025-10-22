@@ -9,43 +9,53 @@ from langchain.llms import OpenAI
 from langchain.chains.question_answering import load_qa_chain
 import platform
 
-# App title and presentation
-st.title('Generación Aumentada por Recuperación (RAG) 💬')
-st.write("Versión de Python:", platform.python_version())
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(page_title="Asistente Repostero", page_icon="🍰", layout="wide")
 
-# Load and display image
+# --- TÍTULO Y DESCRIPCIÓN ---
+st.markdown("""
+# 🍰 Asistente Repostero: Análisis de Recetas y Técnicas
+Bienvenido al **Asistente Repostero**, tu ayudante experto para entender, analizar y dominar cualquier texto sobre pastelería, técnicas de postres o recetas.  
+Sube un PDF con recetas o teoría y hazle preguntas al estilo de un chef pastelero profesional.  
+""")
+
+st.caption(f"Versión de Python: {platform.python_version()}")
+
+# --- IMAGEN DE PRESENTACIÓN ---
 try:
     image = Image.open('Chat_pdf.png')
     st.image(image, width=350)
 except Exception as e:
     st.warning(f"No se pudo cargar la imagen: {e}")
 
-# Sidebar information
+# --- SIDEBAR ---
 with st.sidebar:
-    st.subheader("Este Agente te ayudará a realizar análisis sobre el PDF cargado")
+    st.header("🥄 Panel del Chef Repostero")
+    st.info("Aquí podrás subir tu documento y conversar sobre sus contenidos como si hablaras con un maestro pastelero.")
+    st.markdown("**Consejo:** Puedes subir guías, recetarios o material técnico sobre postres y pedir análisis específicos.")
 
-# Get API key from user
-ke = st.text_input('Ingresa tu Clave de OpenAI', type="password")
+# --- API KEY ---
+ke = st.text_input('🔑 Ingresa tu Clave de OpenAI', type="password")
 if ke:
     os.environ['OPENAI_API_KEY'] = ke
 else:
     st.warning("Por favor ingresa tu clave de API de OpenAI para continuar")
 
-# PDF uploader
-pdf = st.file_uploader("Carga el archivo PDF", type="pdf")
+# --- CARGA DEL PDF ---
+pdf = st.file_uploader("📄 Carga tu archivo PDF de postres o recetas", type="pdf")
 
-# Process the PDF if uploaded
+# --- PROCESAMIENTO DEL PDF ---
 if pdf is not None and ke:
     try:
-        # Extract text from PDF
+        # Extraer texto
         pdf_reader = PdfReader(pdf)
         text = ""
         for page in pdf_reader.pages:
             text += page.extract_text()
         
-        st.info(f"Texto extraído: {len(text)} caracteres")
+        st.success(f"Texto extraído correctamente. Total de {len(text)} caracteres.")
         
-        # Split text into chunks
+        # Dividir en fragmentos
         text_splitter = CharacterTextSplitter(
             separator="\n",
             chunk_size=500,
@@ -53,40 +63,53 @@ if pdf is not None and ke:
             length_function=len
         )
         chunks = text_splitter.split_text(text)
-        st.success(f"Documento dividido en {len(chunks)} fragmentos")
-        
-        # Create embeddings and knowledge base
+        st.info(f"Documento dividido en {len(chunks)} fragmentos de conocimiento repostero.")
+
+        # Crear base de conocimiento
         embeddings = OpenAIEmbeddings()
         knowledge_base = FAISS.from_texts(chunks, embeddings)
-        
-        # User question interface
-        st.subheader("Escribe qué quieres saber sobre el documento")
-        user_question = st.text_area(" ", placeholder="Escribe tu pregunta aquí...")
-        
-        # Process question when submitted
+
+        # --- SECCIÓN DE PREGUNTAS RECOMENDADAS ---
+        st.subheader("🍮 Preguntas recomendadas")
+        st.markdown("Selecciona alguna o escribe la tuya propia:")
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("¿Qué técnicas se usan para lograr una textura esponjosa?"):
+                user_question = "¿Qué técnicas se usan para lograr una textura esponjosa en los postres?"
+            elif st.button("¿Cómo equilibrar dulzura y acidez?"):
+                user_question = "¿Cómo se puede equilibrar la dulzura y acidez en un postre?"
+            else:
+                user_question = None
+        with col2:
+            if st.button("Errores comunes en masas o cremas"):
+                user_question = "¿Cuáles son los errores más comunes al preparar masas o cremas?"
+        with col3:
+            if st.button("Principios de la decoración moderna"):
+                user_question = "¿Cuáles son los principios de la decoración moderna en pastelería?"
+
+        # Campo para pregunta personalizada
+        user_custom_question = st.text_area("O escribe tu pregunta:", placeholder="Ejemplo: ¿Qué temperatura ideal se usa para hornear un soufflé?")
+        if user_custom_question.strip():
+            user_question = user_custom_question
+
+        # --- RESPUESTA ---
         if user_question:
             docs = knowledge_base.similarity_search(user_question)
-            
-            # Use a current model instead of deprecated text-davinci-003
-            # Options: "gpt-3.5-turbo-instruct" or "gpt-4-turbo-preview" depending on your API access
             llm = OpenAI(temperature=0, model_name="gpt-4o")
-            
-            # Load QA chain
             chain = load_qa_chain(llm, chain_type="stuff")
-            
-            # Run the chain
             response = chain.run(input_documents=docs, question=user_question)
-            
-            # Display the response
-            st.markdown("### Respuesta:")
+
+            st.markdown("### 🧁 Respuesta del Chef Repostero:")
             st.markdown(response)
-                
+
     except Exception as e:
         st.error(f"Error al procesar el PDF: {str(e)}")
-        # Add detailed error for debugging
         import traceback
         st.error(traceback.format_exc())
+
 elif pdf is not None and not ke:
-    st.warning("Por favor ingresa tu clave de API de OpenAI para continuar")
+    st.warning("Por favor ingresa tu clave de API de OpenAI para continuar.")
 else:
-    st.info("Por favor carga un archivo PDF para comenzar")
+    st.info("📚 Carga un PDF de recetas o teoría repostera para comenzar tu análisis dulce.")
+

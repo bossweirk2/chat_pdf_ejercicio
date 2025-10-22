@@ -23,7 +23,7 @@ st.caption(f"Versión de Python: {platform.python_version()}")
 
 # --- IMAGEN DE PRESENTACIÓN ---
 try:
-    image = Image.open('postre.jpg')
+    image = Image.open('postre.jpeg')
     st.image(image, width=350)
 except Exception as e:
     st.warning(f"No se pudo cargar la imagen: {e}")
